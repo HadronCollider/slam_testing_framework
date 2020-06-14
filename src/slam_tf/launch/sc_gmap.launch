@@ -1,0 +1,45 @@
+<?xml version="1.0"?>
+
+<launch>
+	<!-- Args for rosbag -->
+	<param name="use_sim_time" value="true"/>
+	<arg name="rate" default="1.0" />
+	<arg name="path"/>
+
+	<!-- Args fot topics -->
+	<arg name="base_frame" default="base_link"/>
+	<arg name="odom_frame" default="odom"/>
+	<arg name="remap_scan" default="scan"/>
+	<arg name="scan_topic" default="/$(arg remap_scan)"/>
+	<arg name="map_topic" default="map_sc_gmapping"/>
+
+	<!-- Args for path's saving -->
+	<arg name="index" default="0" />
+	<arg name="out_map" default="$(arg path).$(arg map_topic).$(arg index).map" />
+
+	<node name="player" pkg="rosbag" type="play"
+		args="--delay=3 --rate $(arg rate) --clock $(arg path)" required="true" />
+
+	<node name="gMappingSlam" pkg="slam_constructor" type="gmapping"
+		cwd="node" required="true" output="screen">
+
+		<!-- ROS-specific parameters -->
+    	<remap from="map" to="$(arg map_topic)"/>
+		<param name="ros/tf/map_frame_id" value="$(arg map_topic)"/>
+		<param name="in/lscan2D/ros/topic/name" value="$(arg scan_topic)" />
+		<param name="in/odometry/ros/tf/odom_frame_id" value="$(arg odom_frame)" />
+
+		<!-- Required params -->
+		<param name="slam/occupancy_estimator/type" value="const" />
+		<param name="slam/scmtch/type" value="MC" />
+		<param name="slam/scmtch/spe/type" value="wmpp" />
+		<param name="slam/scmtch/spe/wmpp/weighting/type" value="even" />
+	</node>
+		
+  	<node name="pose_logger_map_$(arg map_topic)" pkg="slam_tf" type="pose_logger.py">
+		<param name="target_frame" value="$(arg map_topic)" />
+		<param name="base_frame" value="$(arg base_frame)" />
+		<param name="output_file" value="$(arg out_map)" />
+	</node>
+
+</launch>

@@ -1,0 +1,37 @@
+<?xml version="1.0"?>
+
+<launch>
+	<!-- Args for rosbag -->
+	<param name="use_sim_time" value="true"/>
+	<arg name="rate" default="1.0" />
+	<arg name="path"/>
+
+	<!-- Args fot topics -->
+	<arg name="base_frame" default="base_link"/>
+	<arg name="odom_frame" default="odom"/>
+	<arg name="remap_scan" default="scan"/>
+	<arg name="scan_topic" default="/$(arg remap_scan)"/>
+	<arg name="map_topic" default="map_gmapping"/>
+
+	<!-- Args for path's saving -->
+	<arg name="index" default="0" />
+	<arg name="out_map" default="$(arg path).$(arg map_topic).$(arg index).map" />
+
+	<node name="player" pkg="rosbag" type="play"
+		args="--delay=3 --rate $(arg rate) --clock $(arg path)" required="true" />
+
+	<node name="gmapping" pkg="gmapping" type="slam_gmapping">
+    <!-- ROS-specific parameters -->
+    <remap from="scan" to="$(arg remap_scan)" />
+    <remap from="map" to="$(arg map_topic)"/>
+    <param name="map_frame" value="$(arg map_topic)" />
+    <param name="odom_frame" value="$(arg odom_frame)" />
+  </node>
+
+  <node name="pose_logger_map_$(arg map_topic)" pkg="slam_tf" type="pose_logger.py">
+		<param name="target_frame" value="$(arg map_topic)" />
+		<param name="base_frame" value="$(arg base_frame)" />
+		<param name="output_file" value="$(arg out_map)" />
+  </node>
+
+</launch>
